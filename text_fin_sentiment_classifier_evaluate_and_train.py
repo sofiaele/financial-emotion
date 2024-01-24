@@ -4,7 +4,8 @@ from skllm.models.gpt import FewShotGPTClassifier
 from sklearn.metrics import confusion_matrix, f1_score
 from skllm.config import SKLLMConfig
 
-SKLLMConfig.set_openai_key("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")
+#SKLLMConfig.set_openai_key("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")
+SKLLMConfig.set_openai_key("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")
 
 # read financial_data_sentiment.csv
 df = pd.read_csv('financial_data_sentiment.csv', encoding = "ISO-8859-1")
@@ -19,7 +20,7 @@ y_train = y.sample(frac=0.8, random_state=200)
 y_test = y.drop(y_train.index)
 
 # randomly select 100 samples from X_test:
-n_test = 20
+n_test = 100
 X_test = X_test.sample(n=n_test, random_state=200)
 y_test = y_test.sample(n=n_test, random_state=200)
 
