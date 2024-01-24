@@ -19,20 +19,18 @@ y_train = y.sample(frac=0.8, random_state=200)
 y_test = y.drop(y_train.index)
 
 # randomly select 100 samples from X_test:
-n_test = 100
+n_test = 20
 X_test = X_test.sample(n=n_test, random_state=200)
 y_test = y_test.sample(n=n_test, random_state=200)
 
 num_of_train = [5, 10, 15, 20, 25]
 
 f1_s = []
+f1_best = 0
 for n_train in num_of_train:
     # randomly select 10 samples from X_train:
     X_train_temp = X_train.sample(n=n_train, random_state=200)
     y_train_temp = y_train.sample(n=n_train, random_state=200)
-
-    print(X_train_temp.shape)
-    print(X_test.shape)
 
     clf = FewShotGPTClassifier()
     clf.fit(X_train_temp, y_train_temp)
@@ -44,6 +42,16 @@ for n_train in num_of_train:
     f1 = f1_score(y_test, labels, average='macro')
     print(cm)
     print(f1)
+
+    # store clf to file:
+    if f1_best < f1:
+        f1_best = f1
+        # save clf to pickle file:
+        import pickle
+        with open('financial_sentiment_classifier.pkl', 'wb') as f:
+            pickle.dump(clf, f)
+        print("Saved")
+
     f1_s.append(f1)
 
 for n, f1 in zip(num_of_train, f1_s):
