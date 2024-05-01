@@ -16,5 +16,11 @@ import pickle
 with open('financial_sentiment_classifier.pkl', 'rb') as f:
     clf = pickle.load(f)
 
-y = clf.predict(sentences[0::3])
-print(y)
+y = clf.predict(sentences)
+
+
+# add y to df:
+df['text-sentiment'] = y
+
+# save df to csv:
+df.to_csv('data/FOMC Press Conference April 25, 2012_text.csv', index=False)
