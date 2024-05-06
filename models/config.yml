@@ -1,0 +1,7 @@
+features:
+    modality: "audio"
+    type: "all"
+model_type: "classifier"
+ground_truths:
+    type: "aggregates"
+    path: "../data/final.csv"

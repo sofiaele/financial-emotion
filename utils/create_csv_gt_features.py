@@ -12,7 +12,7 @@ def aggregate_sentiment_features_per_recording(csv):
     arousal_means = df[arousal_columns].mean()
     return emotion_means, arousal_means, valence_means
 def create_final_csv(ground_truths):
-    df_gt = pd.read_csv(ground_truths, delimiter=';')
+    df_gt = pd.read_csv(ground_truths, delimiter=',')
     print(df_gt["audio"])
     for index, row in df_gt.iterrows():
         recording = row["audio"]
@@ -28,6 +28,6 @@ def create_final_csv(ground_truths):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--csv', help='path to csv of ground truths', type=str, default='../data/non_intoductory_mean_audio.csv')
+    parser.add_argument('--csv', help='path to csv of ground truths', type=str, default='../data/final.csv')
     args = parser.parse_args()
     create_final_csv(args.csv)
