@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 
 from torch.utils.data import DataLoader
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, roc_auc_score
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, roc_auc_score, f1_score
 from data import FinancialDataset
 import yaml
 import numpy as np
@@ -25,10 +25,12 @@ def train_model(model, optimizer, train_loader, dev_loader, criterion, epochs, p
     train_losses = []
     train_accs = []
     train_roc_aucs = []
+    train_f1s = []
 
     val_losses = []
     val_accs = []
     val_roc_aucs = []
+    val_f1s = []
     for epoch in tqdm(range(epochs), desc="Training", unit="epoch"):
 
         model.train()
@@ -61,16 +63,19 @@ def train_model(model, optimizer, train_loader, dev_loader, criterion, epochs, p
 
         # Calculate accuracy and ROC AUC for training
         train_acc = accuracy_score(y_true, y_pred)
+        f1 = f1_score(y_true, y_pred, average='macro')
         train_roc_auc = roc_auc_score(y_true, y_pred)
         train_losses.append(total_loss / len(train_loader))
         train_accs.append(train_acc)
         train_roc_aucs.append(train_roc_auc)
+        train_f1s.append(f1)
 
         # Evaluate on the validation set
-        val_loss, val_acc, val_roc_auc, _, _ = evaluate_model(model, dev_loader, criterion)
+        val_loss, val_acc, val_roc_auc, _, _, val_f1 = evaluate_model(model, dev_loader, criterion)
         val_losses.append(val_loss)
         val_accs.append(val_acc)
         val_roc_aucs.append(val_roc_auc)
+        val_f1s.append(val_f1)
 
         print(f"Train loss: {total_loss / len(train_loader):.4f} - acc: {train_acc:.4f} - roc_auc: {train_roc_auc:.4f}")
         print(f"Validation loss: {val_loss:.4f} - acc: {val_acc:.4f} - roc_auc: {val_roc_auc:.4f}")
@@ -93,17 +98,17 @@ def train_model(model, optimizer, train_loader, dev_loader, criterion, epochs, p
         print(f'Best validation ROC AUC: {best_val_roc_auc:.4f}')
         model.load_state_dict(best_model_state)
     # Plot learning curves
-    plot_learning_curves(train_losses, val_losses, train_accs, val_accs, train_roc_aucs, val_roc_aucs)
+    plot_learning_curves(train_losses, val_losses, train_accs, val_accs, train_roc_aucs, val_roc_aucs, train_f1s, val_f1s)
 
     return model
-def plot_learning_curves(train_losses, val_losses, train_accs, val_accs, train_roc_aucs, val_roc_aucs):
+def plot_learning_curves(train_losses, val_losses, train_accs, val_accs, train_roc_aucs, val_roc_aucs, train_f1s, val_f1s):
     epochs = len(train_losses)
 
     # Plot Loss curves
     plt.figure(figsize=(12, 4))
 
     # Loss plot
-    plt.subplot(1, 3, 1)
+    plt.subplot(1, 4, 1)
     plt.plot(range(1, epochs + 1), train_losses, label='Train Loss')
     plt.plot(range(1, epochs + 1), val_losses, label='Validation Loss')
     plt.xlabel('Epochs')
@@ -112,7 +117,7 @@ def plot_learning_curves(train_losses, val_losses, train_accs, val_accs, train_r
     plt.legend()
 
     # Accuracy plot
-    plt.subplot(1, 3, 2)
+    plt.subplot(1, 4, 2)
     plt.plot(range(1, epochs + 1), train_accs, label='Train Accuracy')
     plt.plot(range(1, epochs + 1), val_accs, label='Validation Accuracy')
     plt.xlabel('Epochs')
@@ -121,12 +126,21 @@ def plot_learning_curves(train_losses, val_losses, train_accs, val_accs, train_r
     plt.legend()
 
     # ROC AUC plot
-    plt.subplot(1, 3, 3)
+    plt.subplot(1, 4, 3)
     plt.plot(range(1, epochs + 1), train_roc_aucs, label='Train ROC AUC')
     plt.plot(range(1, epochs + 1), val_roc_aucs, label='Validation ROC AUC')
     plt.xlabel('Epochs')
     plt.ylabel('ROC AUC')
     plt.title('ROC AUC vs. Epochs')
+    plt.legend()
+
+    # F1 plot
+    plt.subplot(1, 4, 4)
+    plt.plot(range(1, epochs + 1), train_f1s, label='Train F1')
+    plt.plot(range(1, epochs + 1), val_f1s, label='Validation F1')
+    plt.xlabel('Epochs')
+    plt.ylabel('F1')
+    plt.title('F1 vs. Epochs')
     plt.legend()
 
     plt.tight_layout()
@@ -164,8 +178,8 @@ def evaluate_model(model, dev_loader, criterion):
     # Calculate accuracy and ROC AUC for validation
     val_acc = accuracy_score(y_true, y_pred)
     val_roc_auc = roc_auc_score(y_true, y_pred)
-
-    return total_val_loss / len(dev_loader), val_acc, val_roc_auc, y_true, y_pred
+    f1 = f1_score(y_true, y_pred, average='macro')
+    return total_val_loss / len(dev_loader), val_acc, val_roc_auc, y_true, y_pred, f1
 
 def train(config):
     X, y, speakers, feature_names, tickers, dates = extract_features(config)
@@ -202,7 +216,7 @@ def train(config):
 
     model = train_model(model, optimizer, train_loader, val_loader, criterion, args.epochs, args.patience)
 
-    _, test_acc, test_roc_auc, y_true, y_pred = evaluate_model(model, test_loader, criterion)
+    _, test_acc, test_roc_auc, y_true, y_pred, f1 = evaluate_model(model, test_loader, criterion)
     print(f"Test acc: {test_acc:.4f} - roc_auc: {test_roc_auc:.4f}")
     # Print classification report and confusion matrix
     print(f"Classification Report:\n{classification_report(y_true, y_pred)}")
