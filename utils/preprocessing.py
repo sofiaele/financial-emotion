@@ -8,24 +8,58 @@ sys.path.insert(0, PROJECT_PATH)
 def create_csv(videos, returns):
     # Load the CSV files
     df1 = pd.read_csv(returns, sep=';')
-    df2 = pd.read_csv(videos)
+    df2 = pd.read_csv(videos, sep=';')
 
     # Convert the date columns to a common format (month-year)
     df1['MonthYear'] = pd.to_datetime(df1['DATE'], format='%d/%m/%y').dt.to_period('M')
-    df2['MonthYear'] = pd.to_datetime(df2['Published At'], format='%d/%m/%y').dt.to_period('M')
+    #df2['MonthYear'] = pd.to_datetime(df2['Published_At'], format='%d/%m/%y').dt.to_period('M')
 
-    # Second merge considering 'Introductory' in 'Title'
+    # Define the date formats
+    format1 = '%Y-%m-%d'
+    format2 = '%d/%m/%y'
+    # Convert dates in the first format
+    df2['Published_At_Converted1'] = pd.to_datetime(df2['Published_At'], format=format1, errors='coerce')
+
+    # Convert dates in the second format
+    df2['Published_At_Converted2'] = pd.to_datetime(df2['Published_At'], format=format2, errors='coerce')
+
+    # Combine the results, preferring the non-NaT values from the first conversion
+    df2['Published_At_Final'] = df2['Published_At_Converted1'].fillna(df2['Published_At_Converted2'])
+
+    # Convert to monthly period
+    df2['MonthYear'] = df2['Published_At_Final'].dt.to_period('M')
+
+    # Drop intermediate columns
+    df2 = df2.drop(columns=['Published_At_Converted1', 'Published_At_Converted2'])
+
+    '''# Second merge considering 'Introductory' in 'Title'
     df_introductory = df2[df2['Title'].str.contains('Introductory')]
     merged_df_introductory = pd.merge(df1, df_introductory, left_on='MonthYear', right_on='MonthYear', how='inner')
     # Save the merged dataframe to a new CSV file
     merged_df_introductory.to_csv('introductory.csv', index=False)
+    '''
 
-    # Second merge considering rows where 'Title' does not contain 'Introductory'
+    tickers = df1['TICKER'].unique()
+
+    # Iterate over each TICKER and perform the merge
+    for ticker in tickers:
+        # Filter the DataFrames by the current TICKER
+        df1_ticker = df1[df1['TICKER'] == ticker]
+
+        # Perform the merge for the current TICKER
+        merged_df = pd.merge(df1_ticker, df2, left_on='MonthYear', right_on='MonthYear',
+                                          how='inner')
+        # Add the 'audio' column to the merged DataFrame using title and suffix .wav
+        merged_df['audio'] = merged_df['Title'] + '.wav'
+        merged_df.to_csv(f'../data/final_per_ticker/{ticker}.csv', index=False)
+
+    '''# Second merge considering rows where 'Title' does not contain 'Introductory'
     df_non_introductory = df2[~df2['Title'].str.contains('Introductory')]
-    merged_df_non_introductory = pd.merge(df1, df_non_introductory, left_on='MonthYear', right_on='MonthYear',
+
+    merged_df_non_introductory = pd.merge(df1, df2, left_on='MonthYear', right_on='MonthYear',
                                           how='inner')
     # Save the merged dataframe to a new CSV file
-    merged_df_non_introductory.to_csv('non_introductory.csv', index=False)
+    merged_df_non_introductory.to_csv('non_introductory.csv', index=False)'''
 
 
 def mean_per_month(csv_file):

@@ -4,4 +4,19 @@ features:
 model_type: "classifier"
 ground_truths:
     type: "aggregates"
-    path: "../data/final.csv"
+    path: "../data/all_tickers/concatenated_final.csv"
+text_embeddings:
+    out_folder: "../data/text_embeddings"
+    model: "MiniLM"
+audio_embeddings:
+    out_folder: "../data/audio_embeddings"
+lstm:
+    num_sequence_months: 3
+    ticker_mode: 'same'
+    epochs: 10
+    lr: 0.001
+    batch_size: 32
+    hidden_size: 128
+    num_layers: 1
+    embedding_dim: 768
+    patience: 10

@@ -26,10 +26,11 @@ def aggregate_embeddings_per_recording(csv, model, tokenizer, cache, model_name)
             sum_embeddings = torch.sum(last_hidden_state * weights_for_non_padding.unsqueeze(-1), dim=1)
             num_of_none_padding_tokens = torch.sum(weights_for_non_padding, dim=-1).unsqueeze(-1)
             sentence_embeddings = sum_embeddings / num_of_none_padding_tokens
+            sentence_embeddings = sentence_embeddings.numpy()[0]
         else:
-            sentence_embeddings = model.encode(sentence)
+            sentence_embeddings = model.encode(sentence)[0]
 
-        embeddings.append(sentence_embeddings.numpy()[0])
+        embeddings.append(sentence_embeddings)
     print("Aggregating embeddings of ", csv)
     aggregated_embeddings = np.mean(embeddings, axis=0)
     embedding_file_name = csv.split("/")[-1].split(".")[0] + ".npy"
@@ -37,8 +38,9 @@ def aggregate_embeddings_per_recording(csv, model, tokenizer, cache, model_name)
     np.save(embedding_filename, aggregated_embeddings)
     return aggregated_embeddings
 
-def extract_llama_embeddings(config):
+def extract_text_embeddings(config):
     model_name = config["text_embeddings"]["model"]
+    tokenizer = None
     if model_name == 'llama':
         token = "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"
         model_id = "meta-llama/Llama-2-7b-chat-hf"
@@ -77,4 +79,4 @@ if __name__ == '__main__':
     args = argparser.parse_args()
     with open(args.config, 'r') as config_file:
         config = yaml.safe_load(config_file)
-    X, y, speakers = extract_llama_embeddings(config)
+    X, y, speakers = extract_text_embeddings(config)

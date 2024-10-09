@@ -32,7 +32,7 @@ def extract_trillsson_embeddings(config):
     model.load_weights("trillson_saved")
 
     ground_truths = config['ground_truths']['path']
-    cache = config["audio_embeddings"]
+    cache = config["audio_embeddings"]['out_folder']
     # Ensure the embeddings directory exists
     if not os.path.exists(cache):
         os.makedirs(cache)

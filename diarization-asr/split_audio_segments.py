@@ -28,7 +28,7 @@ def split_wav(input_wav, output_folder, segments_df):
         segments_df.at[index, 'audio_path'] = f"utterances/{output_filename.split('/')[-1]}"
     return segments_df
 def make_utterances():
-    csvs = [os.path.join('../data/new_audio_2/', csv) for csv in os.listdir('../data/new_audio_2/') if csv.endswith(".csv")]
+    csvs = [os.path.join('../data/t/', csv) for csv in os.listdir('../data/t/') if csv.endswith(".csv")]
     # for loop csvs
     for file in csvs:
         # Load the CSV file with start and end times
@@ -40,8 +40,8 @@ def make_utterances():
                 segments_df.drop(index=index, inplace=True)
                 next_row_index = index + 1
                 segments_df.at[next_row_index, 'start'] = start_time
-        segments_df = split_wav(".".join(file.split(".")[:-1]) + ".wav", "../data/new_audio_2/utterances", segments_df)
-        segments_df.to_csv(file, index=False)
+        segments_df = split_wav(".".join(file.split(".")[:-1]) + ".wav", "../data/t/utterances", segments_df)
+        #segments_df.to_csv(file, index=False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
