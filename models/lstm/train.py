@@ -15,12 +15,20 @@ from utils import split_in_chronological_order, custom_collate_fn
 from model import LSTMClassifier
 import argparse
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
-def train_model(model, optimizer, train_loader, dev_loader, criterion, epochs, patience=5):
+def train_model(model, optimizer, train_loader, dev_loader, criterion, epochs, patience=100):
     best_val_roc_auc = 0.0
     epochs_without_improvement = 0
     best_model_state = None
 
+    train_losses = []
+    train_accs = []
+    train_roc_aucs = []
+
+    val_losses = []
+    val_accs = []
+    val_roc_aucs = []
     for epoch in tqdm(range(epochs), desc="Training", unit="epoch"):
 
         model.train()
@@ -35,9 +43,9 @@ def train_model(model, optimizer, train_loader, dev_loader, criterion, epochs, p
 
             # Apply sigmoid manually since the model output is raw logits
             predictions = torch.sigmoid(outputs.squeeze())
-
             # Calculate binary cross-entropy loss
             loss = criterion(predictions, y_batch.float())
+
             total_loss += loss.item()
 
             # Backpropagation and optimization
@@ -54,9 +62,15 @@ def train_model(model, optimizer, train_loader, dev_loader, criterion, epochs, p
         # Calculate accuracy and ROC AUC for training
         train_acc = accuracy_score(y_true, y_pred)
         train_roc_auc = roc_auc_score(y_true, y_pred)
+        train_losses.append(total_loss / len(train_loader))
+        train_accs.append(train_acc)
+        train_roc_aucs.append(train_roc_auc)
 
         # Evaluate on the validation set
         val_loss, val_acc, val_roc_auc, _, _ = evaluate_model(model, dev_loader, criterion)
+        val_losses.append(val_loss)
+        val_accs.append(val_acc)
+        val_roc_aucs.append(val_roc_auc)
 
         print(f"Train loss: {total_loss / len(train_loader):.4f} - acc: {train_acc:.4f} - roc_auc: {train_roc_auc:.4f}")
         print(f"Validation loss: {val_loss:.4f} - acc: {val_acc:.4f} - roc_auc: {val_roc_auc:.4f}")
@@ -74,12 +88,54 @@ def train_model(model, optimizer, train_loader, dev_loader, criterion, epochs, p
             print(f'Early stopping triggered after {epoch + 1} epochs. Best ROC AUC: {best_val_roc_auc:.4f}')
             break
 
-    # Load the best model state if early stopping was triggered
+    # Load the best model state
     if best_model_state:
+        print(f'Best validation ROC AUC: {best_val_roc_auc:.4f}')
         model.load_state_dict(best_model_state)
+    # Plot learning curves
+    plot_learning_curves(train_losses, val_losses, train_accs, val_accs, train_roc_aucs, val_roc_aucs)
 
     return model
+def plot_learning_curves(train_losses, val_losses, train_accs, val_accs, train_roc_aucs, val_roc_aucs):
+    epochs = len(train_losses)
 
+    # Plot Loss curves
+    plt.figure(figsize=(12, 4))
+
+    # Loss plot
+    plt.subplot(1, 3, 1)
+    plt.plot(range(1, epochs + 1), train_losses, label='Train Loss')
+    plt.plot(range(1, epochs + 1), val_losses, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Loss vs. Epochs')
+    plt.legend()
+
+    # Accuracy plot
+    plt.subplot(1, 3, 2)
+    plt.plot(range(1, epochs + 1), train_accs, label='Train Accuracy')
+    plt.plot(range(1, epochs + 1), val_accs, label='Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracy vs. Epochs')
+    plt.legend()
+
+    # ROC AUC plot
+    plt.subplot(1, 3, 3)
+    plt.plot(range(1, epochs + 1), train_roc_aucs, label='Train ROC AUC')
+    plt.plot(range(1, epochs + 1), val_roc_aucs, label='Validation ROC AUC')
+    plt.xlabel('Epochs')
+    plt.ylabel('ROC AUC')
+    plt.title('ROC AUC vs. Epochs')
+    plt.legend()
+
+    plt.tight_layout()
+
+    # Save the plot as an image
+    plt.savefig('learning_curves.png')
+
+    # Show the plot
+    plt.show()
 
 def evaluate_model(model, dev_loader, criterion):
     model.eval()
@@ -94,7 +150,6 @@ def evaluate_model(model, dev_loader, criterion):
 
             # Apply sigmoid to get probabilities
             predictions = torch.sigmoid(outputs.squeeze())
-
             # Calculate the validation loss
             loss = criterion(predictions, y_batch.float())
             total_val_loss += loss.item()
@@ -139,10 +194,10 @@ def train(config):
 
     # Determine the feature dimension
     input_size = X_sample.size(-1)
-    model = LSTMClassifier(input_size, args.embedding_dim, args.hidden_size, output_size, args.num_layers)
+    model = LSTMClassifier(input_size, args.linear_size, args.hidden_size, output_size, args.num_layers)
 
     # Loss and optimizer
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     model = train_model(model, optimizer, train_loader, val_loader, criterion, args.epochs, args.patience)

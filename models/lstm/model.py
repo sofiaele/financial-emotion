@@ -9,18 +9,16 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 class LSTMClassifier(nn.Module):
 
-    def __init__(self, input_size, embedding_dim, hidden_dim, output_size, num_layers=1):
+    def __init__(self, input_size, linear_size, hidden_dim, output_size, num_layers=1):
         super(LSTMClassifier, self).__init__()
 
-        #self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.input_size = input_size
 
         #self.embedding = nn.Embedding(input_size, embedding_dim)
         self.lstm = nn.LSTM(input_size, hidden_dim, num_layers, batch_first=True)
-
         self.fc = nn.Linear(hidden_dim, output_size)
-
+        #self.fc2 = nn.Linear(linear_size, output_size)
         self.dropout_layer = nn.Dropout(p=0.2)
 
     def init_hidden(self, batch_size):
@@ -40,5 +38,6 @@ class LSTMClassifier(nn.Module):
         # ht[-1] = (batch_size x hidden_dim)
         output = self.dropout_layer(ht[-1])
         output = self.fc(output)
+        #output = self.fc2(output)
 
         return output
