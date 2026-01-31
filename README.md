@@ -1,25 +1,57 @@
 # financial-emotion
-Pridicting bank stock returns from emotion of central banker press conferences
 
-STEPS:
+Emotion recognition from Federal Reserve press conference speech.
 
-1. Use csv with youtube links to download the audio files from youtube videos:
-   - Run utils/preprocessing/download_audios_from_csv(csv_file)
-   - Outcomes: .csv file with new column of audio file paths, audio files in `data/audio` folder
-2. Run utils/preprocessing/create_csv(videos, returns)
-   - Outcomes: introductory.csv, non_introductory.csv with merged youtube info in returns.
-3. Run utils/preprocessing/mean_per_month(csv_file)
-   - Outcomes: non_introductory_mean.csv with mean returns per month
-4. (Optional): Merge previous csv with new one (non_introductory_mean.csv + final.csv)
-   - Run utils/preprocessing/merge_csvs(csv1, csv2)
-   - Outcomes: merged.csv
-- The above mentioned csv serves as the final ground truth file.
-5. python3 diarization-asr/whisper.py --audios path_to_audio_files
-   - Outcomes: created csvs for each audio file with speaker diarization and ASR in the folder of audios
-6. python3 diarization-asr/dominant_speaker.py --csvs path_to_csvs
-   - Outcomes: csv with dominant speaker per audio file
-7. python3 diarization-asr/split_audio_segments.py
-   - Creates audio utterances and updates the csv with the path to the utterances
-8. Send to behavioral models using client.py and utterances folder
-9. Convert json results to csv 
-   - python3 utils/api_json_to_csv.py --json path_to_json
+## Overview
+
+This repository implements emotion recognition for Federal Reserve press conferences (2011Q3-2023Q4). The pipeline extracts emotional content from Chair speeches using speaker diarization, target speaker identification, and multitask emotion recognition.
+
+**Input**: `data/all_videos.csv` - List of YouTube video URLs
+**Output**: `ground_truths_sentiments.csv` - Emotional posteriors for each conference
+
+## Pipeline
+
+1. Download audio from YouTube videos
+   ```bash
+   python utils/preprocessing/download_audios_from_csv.py --csv data/all_videos.csv
+   ```
+   Creates audio files in `data/audio/`
+
+2. Speaker diarization
+   ```bash
+   python diarization-asr/whisper.py --audios data/audio
+   ```
+   Creates CSV files with speaker turns for each audio
+
+3. Dominant speaker identification
+   ```bash
+   python diarization-asr/dominant_speaker.py --csvs data/audio
+   ```
+   Labels Fed Chair utterances as 'banker'
+
+4. Audio segmentation
+   ```bash
+   python diarization-asr/split_audio_segments.py
+   ```
+   Splits audio into individual utterance files
+
+5. Emotion recognition
+   ```bash
+   python models/emotion_recognition/inference.py \
+       --mode batch \
+       --model_path data/emotion_models/best_model.pt \
+       --audio_dir data/audio \
+       --output ground_truths_sentiments.csv
+   ```
+   Produces emotional posteriors aggregated at conference level
+
+## Output Format
+
+`ground_truths_sentiments.csv` contains:
+- conference: Conference identifier
+- audio: Audio filename
+- emotion_angry, emotion_happy, emotion_neutral, emotion_sad: Emotion posteriors
+- valence_negative, valence_neutral, valence_positive: Valence posteriors
+- arousal_weak, arousal_neutral, arousal_strong: Arousal posteriors
+
+See `models/emotion_recognition/README.md` for model training details.
