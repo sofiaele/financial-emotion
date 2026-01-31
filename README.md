@@ -9,11 +9,57 @@ This repository implements emotion recognition for Federal Reserve press confere
 **Input**: `data/all_videos.csv` - List of YouTube video URLs
 **Output**: `ground_truths_sentiments.csv` - Emotional posteriors for each conference
 
+## Installation
+
+### Prerequisites
+- Python 3.8 or higher
+- FFmpeg and development libraries (required for audio processing)
+- pkg-config (required for building PyAV)
+
+### Install FFmpeg and Dependencies
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install -y ffmpeg pkg-config \
+    libavformat-dev libavcodec-dev libavdevice-dev \
+    libavutil-dev libavfilter-dev libswscale-dev libswresample-dev
+```
+
+**macOS:**
+```bash
+brew install ffmpeg pkg-config
+```
+
+**Windows:**
+1. Install FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH
+2. Install pkg-config from [chocolatey](https://chocolatey.org/): `choco install pkgconfiglite`
+3. Set PKG_CONFIG_PATH to point to FFmpeg's pkgconfig directory
+
+### Install Python Dependencies
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/sofiaele/financial-emotion.git
+   cd financial-emotion
+   ```
+
+2. Create a virtual environment (recommended):
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install required packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
 ## Pipeline
 
 1. Download audio from YouTube videos
    ```bash
-   python utils/preprocessing/download_audios_from_csv.py --csv data/all_videos.csv
+   python utils/preprocessing.py --csv data/all_videos.csv
    ```
    Creates audio files in `data/audio/`
 

@@ -108,7 +108,14 @@ def download_audio(link):
 
 def download_audios_from_csv(metadata_file):
     # Load your DataFrame with the 'Link' column
-    df = pd.read_csv(metadata_file)
+    # Try to detect separator - use semicolon if present, otherwise comma
+    try:
+        df = pd.read_csv(metadata_file, sep=';')
+        if 'Link' not in df.columns:
+            df = pd.read_csv(metadata_file)
+    except:
+        df = pd.read_csv(metadata_file)
+
     # Apply the function to each row in the DataFrame and create a new column
     for index, row in df.iterrows():
         df.at[index, 'audio'] = download_audio(row['Link'])
@@ -163,5 +170,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--videos', help='csv of video metadata', type=str, default='videos.csv', required=False)
     parser.add_argument('--returns', help='csv of financial metadata', type=str, default='returns.csv', required=False)
+    parser.add_argument('--csv', help='csv file to download audios from', type=str, required=False)
+    parser.add_argument('--mode', help='mode to run: create_csv or download_audios', type=str, default='create_csv', required=False)
     args = parser.parse_args()
-    create_csv(args.videos, args.returns)
+
+    if args.mode == 'download_audios' or args.csv:
+        if not args.csv:
+            print("Error: --csv argument is required for downloading audios")
+            sys.exit(1)
+        download_audios_from_csv(args.csv)
+    else:
+        create_csv(args.videos, args.returns)
