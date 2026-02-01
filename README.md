@@ -1,4 +1,4 @@
-# financial-emotion
+# Financial Emotion Recognition
 
 Emotion recognition from Federal Reserve press conference speech.
 
@@ -6,17 +6,32 @@ Emotion recognition from Federal Reserve press conference speech.
 
 This repository implements emotion recognition for Federal Reserve press conferences (2011Q3-2023Q4). The pipeline extracts emotional content from Chair speeches using speaker diarization, target speaker identification, and multitask emotion recognition.
 
-**Input**: `data/all_videos.csv` - List of YouTube video URLs
+**Input**: Audio files from Federal Reserve press conferences
 **Output**: `ground_truths_sentiments.csv` - Emotional posteriors for each conference
 
-## Installation
+## Prerequisites
 
-### Prerequisites
-- Python 3.8 or higher
+- Python 3.10
+- [uv](https://github.com/astral-sh/uv) package manager (recommended)
 - FFmpeg and development libraries (required for audio processing)
 - pkg-config (required for building PyAV)
 
-### Install FFmpeg and Dependencies
+## Installation
+
+### 1. Install uv Package Manager
+
+```bash
+# On macOS and Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# On Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Or with pip
+pip install uv
+```
+
+### 2. Install System Dependencies
 
 **Ubuntu/Debian:**
 ```bash
@@ -36,7 +51,7 @@ brew install ffmpeg pkg-config
 2. Install pkg-config from [chocolatey](https://chocolatey.org/): `choco install pkgconfiglite`
 3. Set PKG_CONFIG_PATH to point to FFmpeg's pkgconfig directory
 
-### Install Python Dependencies
+### 3. Install Python Dependencies
 
 1. Clone the repository:
    ```bash
@@ -44,60 +59,130 @@ brew install ffmpeg pkg-config
    cd financial-emotion
    ```
 
-2. Create a virtual environment (recommended):
+2. Create a virtual environment with uv:
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   uv venv -p 3.10
+   source .venv/bin/activate  # On Linux/Mac
+   # or
+   .venv\Scripts\activate  # On Windows
    ```
 
 3. Install required packages:
    ```bash
-   pip install -r requirements.txt
+   uv pip install -r requirements.txt
    ```
+
+**Note**: Using `uv` is recommended as it's significantly faster than traditional pip and handles dependency resolution more reliably.
+
+## Data Preparation
+
+### Audio Files
+
+This repository expects pre-downloaded audio files from Federal Reserve press conferences. Audio files should be:
+
+- **Format**: WAV
+- **Sample rate**: 16000 Hz (16 kHz)
+- **Channels**: Mono (1 channel)
+- **Location**: `data/audio/` directory
+
+Audio files can be obtained from the [Federal Reserve's official YouTube channel](https://www.youtube.com/user/FederalReserve) or other official sources.
+
+### Link Audio Files to Metadata
+
+Once audio files are placed in `data/audio/`, link them to the metadata CSV:
+
+```bash
+python utils/preprocessing.py --csv data/all_videos.csv
+```
+
+This creates `all_videos_audio.csv` mapping each video entry to its corresponding audio file.
 
 ## Pipeline
 
-1. Download audio from YouTube videos
-   ```bash
-   python utils/preprocessing.py --csv data/all_videos.csv
-   ```
-   Creates audio files in `data/audio/`
+### 1. Link Audio Files with Metadata
 
-2. Speaker diarization
-   ```bash
-   python diarization-asr/whisper.py --audios data/audio
-   ```
-   Creates CSV files with speaker turns for each audio
+```bash
+python utils/preprocessing.py --csv data/all_videos.csv
+```
 
-3. Dominant speaker identification
-   ```bash
-   python diarization-asr/dominant_speaker.py --csvs data/audio
-   ```
-   Labels Fed Chair utterances as 'banker'
+**Output**: `all_videos_audio.csv` with audio file mappings
 
-4. Audio segmentation
-   ```bash
-   python diarization-asr/split_audio_segments.py
-   ```
-   Splits audio into individual utterance files
+### 2. Speaker Diarization
 
-5. Emotion recognition
-   ```bash
-   python models/emotion_recognition/inference.py \
-       --mode batch \
-       --model_path data/emotion_models/best_model.pt \
-       --audio_dir data/audio \
-       --output ground_truths_sentiments.csv
-   ```
-   Produces emotional posteriors aggregated at conference level
+Process only the audio files specified in your CSV:
+
+```bash
+python diarization-asr/whisper.py --audios data/audio --csv all_videos_audio.csv
+```
+
+Or process all audio files in the directory:
+
+```bash
+python diarization-asr/whisper.py --audios data/audio
+```
+
+**Output**: CSV files in `data/audio/` with speaker turn information for each audio file
+
+**Note**: The `--csv` parameter ensures only audios listed in your metadata are processed, avoiding unnecessary computation on extra files.
+
+### 3. Dominant Speaker Identification
+
+```bash
+python diarization-asr/dominant_speaker.py --csvs data/audio
+```
+
+**Output**: Labels Fed Chair utterances as 'banker' in the speaker turn CSV files
+
+### 4. Audio Segmentation
+
+```bash
+python diarization-asr/split_audio_segments.py
+```
+
+**Output**: Individual utterance audio files split by speaker turns
+
+### 5. Emotion Recognition
+
+```bash
+python models/emotion_recognition/inference.py \
+    --mode batch \
+    --model_path data/emotion_models/best_model.pt \
+    --audio_dir data/audio \
+    --output ground_truths_sentiments.csv
+```
+
+**Output**: `ground_truths_sentiments.csv` with emotional posteriors aggregated at conference level
 
 ## Output Format
 
 `ground_truths_sentiments.csv` contains:
-- conference: Conference identifier
-- audio: Audio filename
-- emotion_angry, emotion_happy, emotion_neutral, emotion_sad: Emotion posteriors
-- valence_negative, valence_neutral, valence_positive: Valence posteriors
-- arousal_weak, arousal_neutral, arousal_strong: Arousal posteriors
+- `conference`: Conference identifier
+- `audio`: Audio filename
+- `emotion_angry`, `emotion_happy`, `emotion_neutral`, `emotion_sad`: Emotion posteriors
+- `valence_negative`, `valence_neutral`, `valence_positive`: Valence posteriors
+- `arousal_weak`, `arousal_neutral`, `arousal_strong`: Arousal posteriors
 
-See `models/emotion_recognition/README.md` for model training details.
+## Model Training
+
+For information on training the emotion recognition model, see `models/emotion_recognition/README.md`.
+
+## Citation
+
+If you use this code in your research, please cite:
+
+```bibtex
+@article{yourpaper2024,
+  title={Emotion Recognition from Federal Reserve Press Conference Speech},
+  author={Your Name},
+  journal={Your Journal},
+  year={2024}
+}
+```
+
+## License
+
+[Add your license information here]
+
+## Contact
+
+[Add contact information]
