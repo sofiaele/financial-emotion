@@ -166,23 +166,6 @@ python models/emotion_recognition/inference.py \
 
 For information on training the emotion recognition model, see `models/emotion_recognition/README.md`.
 
-## Citation
-
-If you use this code in your research, please cite:
-
-```bibtex
-@article{yourpaper2024,
-  title={Emotion Recognition from Federal Reserve Press Conference Speech},
-  author={Your Name},
-  journal={Your Journal},
-  year={2024}
-}
-```
-
-## License
-
-[Add your license information here]
-
 ## Contact
 
-[Add contact information]
+seleftheriou@aueb.gr
